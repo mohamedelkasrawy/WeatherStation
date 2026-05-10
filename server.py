@@ -11,8 +11,6 @@ app = Flask(__name__)
 CORS(app)
 
 # MySQL config
-import os
-
 db_config = {
     'host': os.environ.get('DB_HOST', 'localhost'),
     'port': int(os.environ.get('DB_PORT', 3306)),
@@ -39,6 +37,44 @@ latest_data = {
 def get_db():
     return mysql.connector.connect(**db_config)
 
+def init_db():
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sensor_readings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                temperature FLOAT,
+                humidity FLOAT,
+                rain INT,
+                light INT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS alert_thresholds (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                parameter VARCHAR(50),
+                min_value FLOAT,
+                max_value FLOAT
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS alert_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                parameter VARCHAR(50),
+                value FLOAT,
+                message VARCHAR(255),
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        db.commit()
+        cursor.close()
+        db.close()
+        print("Database initialized!")
+    except Exception as e:
+        print(f"Database init error: {e}")
+
 def on_connect(client, userdata, flags, rc, properties=None):
     print("Connected to MQTT broker!")
     client.subscribe("weather/#")
@@ -52,7 +88,6 @@ def on_message(client, userdata, msg):
     latest_data[parameter] = float(value)
     latest_data["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Save to database every time all 4 readings are received
     if all(latest_data[k] != 0 for k in ["temperature", "humidity"]):
         save_to_db()
         check_alerts()
@@ -98,6 +133,9 @@ def check_alerts():
         db.close()
     except Exception as e:
         print(f"Alert error: {e}")
+
+# Initialize database
+init_db()
 
 # MQTT setup
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -162,10 +200,8 @@ def get_thresholds():
 def set_threshold():
     try:
         data = request.json
-
         db = get_db()
         cursor = db.cursor()
-
         cursor.execute("""
             INSERT INTO alert_thresholds
             (parameter, min_value, max_value)
@@ -175,41 +211,32 @@ def set_threshold():
             data["min_value"],
             data["max_value"]
         ))
-
         db.commit()
-
         cursor.close()
         db.close()
-
         return jsonify({"message": "Threshold saved!"})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/thresholds/<int:id>", methods=["DELETE"])
 def delete_threshold(id):
-
     try:
         db = get_db()
         cursor = db.cursor()
-
         cursor.execute(
             "DELETE FROM alert_thresholds WHERE id = %s",
             (id,)
         )
-
         db.commit()
-
-        return jsonify({
-            "message": "Threshold deleted"
-        })
-
+        cursor.close()
+        db.close()
+        return jsonify({"message": "Threshold deleted"})
     except Exception as e:
-        return jsonify({
-            "error": str(e)
-        }), 500
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/")
 def index():
     return send_from_directory(".", "index.html")
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
