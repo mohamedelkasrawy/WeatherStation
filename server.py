@@ -234,6 +234,11 @@ def delete_threshold(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/init")
+def init():
+    init_db()
+    return jsonify({"message": "Database initialized!"})
+
 @app.route("/")
 def index():
     return send_from_directory(".", "index.html")
