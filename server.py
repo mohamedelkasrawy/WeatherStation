@@ -124,6 +124,7 @@ def check_alerts():
         cursor.execute("SELECT * FROM alert_thresholds")
         thresholds = cursor.fetchall()
         alert_triggered = False
+
         for threshold in thresholds:
             param = threshold["parameter"]
             value = latest_data.get(param, 0)
@@ -138,15 +139,14 @@ def check_alerts():
                 alert_triggered = True
                 mqtt_client.publish("weather/alert", message)
                 print(f"Published alert to MQTT: {message}")
-        
-        if not alert_triggered:
+
+        # Only send ALL_CLEAR if thresholds exist but none triggered
+        if not alert_triggered and len(thresholds) > 0:
             mqtt_client.publish("weather/alert", "ALL_CLEAR")
             print("Published ALL_CLEAR to MQTT")
-        
+
         cursor.close()
         db.close()
-    except Exception as e:
-        print(f"Alert error: {e}")
     except Exception as e:
         print(f"Alert error: {e}")
 
