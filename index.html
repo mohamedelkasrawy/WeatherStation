@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Station Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; }
+        
+        header {
+            background: linear-gradient(135deg, #1e3a5f, #0f172a);
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #1e40af;
+        }
+        header h1 { font-size: 24px; color: #60a5fa; }
+        #last-updated { font-size: 13px; color: #94a3b8; }
+
+        .container { padding: 30px 40px; }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            border: 1px solid #334155;
+            transition: transform 0.2s;
+        }
+        .card:hover { transform: translateY(-4px); }
+        .card .icon { font-size: 36px; margin-bottom: 10px; }
+        .card .label { font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
+        .card .value { font-size: 32px; font-weight: bold; color: #60a5fa; }
+        .card .unit { font-size: 14px; color: #64748b; }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #60a5fa;
+            margin-bottom: 16px;
+        }
+
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-box {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #334155;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #334155;
+        }
+
+        .alert-item {
+            background: #2d1b1b;
+            border-left: 4px solid #ef4444;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .alert-item .time { color: #94a3b8; font-size: 11px; }
+
+        .threshold-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .threshold-form select,
+        .threshold-form input {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .threshold-form button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .threshold-form button:hover { background: #1d4ed8; }
+
+        .threshold-item {
+            background: #0f172a;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🌤️ Weather Station Dashboard</h1>
+    <div>
+        <span class="status-dot"></span>
+        <span id="last-updated">Waiting for data...</span>
+    </div>
+</header>
+
+<div class="container">
+
+    <!-- Sensor Cards -->
+    <div class="cards">
+        <div class="card">
+            <div class="icon">🌡️</div>
+            <div class="label">Temperature</div>
+            <div class="value" id="temp">--</div>
+            <div class="unit">°C</div>
+        </div>
+        <div class="card">
+            <div class="icon">💧</div>
+            <div class="label">Humidity</div>
+            <div class="value" id="humidity">--</div>
+            <div class="unit">%</div>
+        </div>
+        <div class="card">
+            <div class="icon">🌧️</div>
+            <div class="label">Rain</div>
+            <div class="value" id="rain">--</div>
+            <div class="unit">level</div>
+        </div>
+        <div class="card">
+            <div class="icon">☀️</div>
+            <div class="label">Light</div>
+            <div class="value" id="light">--</div>
+            <div class="unit">level</div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="section-title">📈 Historical Data</div>
+    <div class="charts">
+        <div class="chart-box">
+            <canvas id="tempChart"></canvas>
+        </div>
+        <div class="chart-box">
+            <canvas id="humidityChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Alerts + Thresholds -->
+    <div class="bottom-grid">
+        <div class="panel">
+            <div class="section-title">🔔 Recent Alerts</div>
+            <div id="alerts-list">No alerts yet.</div>
+        </div>
+        <div class="panel">
+            <div class="section-title">⚙️ Set Alert Thresholds</div>
+            <div class="threshold-form">
+                <select id="param">
+                    <option value="temperature">Temperature</option>
+                    <option value="humidity">Humidity</option>
+                    <option value="rain">Rain</option>
+                    <option value="light">Light</option>
+                </select>
+                <input type="number" id="min-val" placeholder="Min value"/>
+                <input type="number" id="max-val" placeholder="Max value"/>
+                <button onclick="setThreshold()">Save</button>
+            </div>
+            <div id="thresholds-list"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    
+const API = "https://majority-ouch-dork.ngrok-free.dev/api";
+    // Charts
+    const tempChart = new Chart(document.getElementById("tempChart"), {
+        type: "line",
+        data: {
+            labels: [],
+            datasets: [{
+                label: "Temperature (°C)",
+                data: [],
+                borderColor: "#ef4444",
+                backgroundColor: "rgba(239,68,68,0.1)",
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { labels: { color: "#e2e8f0" } } }, scales: { x: { ticks: { color: "#94a3b8" } }, y: { ticks: { color: "#94a3b8" } } } }
+    });
+
+    const humidityChart = new Chart(document.getElementById("humidityChart"), {
+        type: "line",
+        data: {
+            labels: [],
+            datasets: [{
+                label: "Humidity (%)",
+                data: [],
+                borderColor: "#60a5fa",
+                backgroundColor: "rgba(96,165,250,0.1)",
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { labels: { color: "#e2e8f0" } } }, scales: { x: { ticks: { color: "#94a3b8" } }, y: { ticks: { color: "#94a3b8" } } } }
+    });
+
+    // Fetch latest data
+    async function fetchLatest() {
+        const res = await fetch(`${API}/latest`);
+        const data = await res.json();
+        document.getElementById("temp").textContent = data.temperature || "--";
+        document.getElementById("humidity").textContent = data.humidity || "--";
+        document.getElementById("rain").textContent = data.rain || "--";
+        document.getElementById("light").textContent = data.light || "--";
+        if (data.timestamp) {
+            document.getElementById("last-updated").textContent = "Last updated: " + data.timestamp;
+        }
+    }
+
+    // Fetch history for charts
+    async function fetchHistory() {
+        const res = await fetch(`${API}/history`);
+        const data = await res.json();
+        const labels = data.map(d => d.timestamp ? d.timestamp.substring(11, 16) : "").reverse();
+        const temps = data.map(d => d.temperature).reverse();
+        const humids = data.map(d => d.humidity).reverse();
+
+        tempChart.data.labels = labels;
+        tempChart.data.datasets[0].data = temps;
+        tempChart.update();
+
+        humidityChart.data.labels = labels;
+        humidityChart.data.datasets[0].data = humids;
+        humidityChart.update();
+    }
+
+    // Fetch alerts
+    async function fetchAlerts() {
+        const res = await fetch(`${API}/alerts`);
+        const data = await res.json();
+        const list = document.getElementById("alerts-list");
+        if (data.length === 0) {
+            list.innerHTML = "No alerts yet.";
+        } else {
+            list.innerHTML = data.map(a => `
+                <div class="alert-item">
+                    ⚠️ ${a.message}
+                    <div class="time">${a.timestamp}</div>
+                </div>
+            `).join("");
+        }
+    }
+
+    // Fetch thresholds
+    // Fetch thresholds
+async function fetchThresholds() {
+
+    const res = await fetch(`${API}/thresholds`);
+    const data = await res.json();
+
+    const list = document.getElementById("thresholds-list");
+
+    if (data.length === 0) {
+        list.innerHTML = "No thresholds set.";
+        return;
+    }
+
+    list.innerHTML = "";
+
+    data.forEach(t => {
+
+        const item = document.createElement("div");
+        item.className = "threshold-item";
+
+        item.innerHTML = `
+            <div>
+                <strong>${t.parameter}</strong><br>
+                Min: ${t.min_value} | Max: ${t.max_value}
+            </div>
+        `;
+
+        const btn = document.createElement("button");
+
+        btn.innerText = "Delete";
+
+        btn.style.background = "#ef4444";
+        btn.style.color = "white";
+        btn.style.border = "none";
+        btn.style.padding = "6px 12px";
+        btn.style.borderRadius = "6px";
+        btn.style.cursor = "pointer";
+
+        btn.onclick = () => deleteThreshold(t.id);
+
+        item.appendChild(btn);
+
+        list.appendChild(item);
+    });
+}
+
+// Delete threshold
+async function deleteThreshold(id) {
+
+    if (!confirm("Delete this threshold?")) return;
+
+    const res = await fetch(
+        `${API}/thresholds/${id}`,
+        {
+            method: "DELETE"
+        }
+    );
+}
+
+    
+    // Set threshold
+    async function setThreshold() {
+        const param = document.getElementById("param").value;
+        const min = document.getElementById("min-val").value;
+        const max = document.getElementById("max-val").value;
+        await fetch(`${API}/thresholds`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ parameter: param, min_value: min, max_value: max })
+        });
+        fetchThresholds();
+    }
+
+
+    // Auto refresh every 3 seconds
+    setInterval(() => {
+        fetchLatest();
+        fetchHistory();
+        fetchAlerts();
+        fetchThresholds();
+    }, 3000);
+
+    // Initial load
+    fetchLatest();
+    fetchHistory();
+    fetchAlerts();
+    fetchThresholds();
+</script>
+
+</body>
+</html>
