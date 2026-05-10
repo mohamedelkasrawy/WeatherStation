@@ -120,13 +120,11 @@ def save_to_db():
 alert_active = False
 
 def check_alerts():
-    global alert_active
     try:
         db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM alert_thresholds")
         thresholds = cursor.fetchall()
-        alert_triggered = False
 
         for threshold in thresholds:
             param = threshold["parameter"]
@@ -139,22 +137,12 @@ def check_alerts():
                 """, (param, value, message))
                 db.commit()
                 print(f"ALERT: {message}")
-                alert_triggered = True
-                if not alert_active:
-                    mqtt_client.publish("weather/alert", message)
-                    print(f"Published alert to MQTT: {message}")
-                    alert_active = True
-
-        if not alert_triggered and alert_active and len(thresholds) > 0:
-            mqtt_client.publish("weather/alert", "ALL_CLEAR")
-            print("Published ALL_CLEAR to MQTT")
-            alert_active = False
+                mqtt_client.publish("weather/alert", message)
 
         cursor.close()
         db.close()
     except Exception as e:
         print(f"Alert error: {e}")
-
 # Initialize database
 init_db()
 

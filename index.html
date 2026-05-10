@@ -256,7 +256,8 @@ const API = "https://weatherstation-production-f287.up.railway.app/api";
         const data = await res.json();
         document.getElementById("temp").textContent = data.temperature || "--";
         document.getElementById("humidity").textContent = data.humidity || "--";
-        document.getElementById("rain").textContent = data.rain || "--";
+        const rainValue = data.rain;
+        document.getElementById("rain").textContent = rainValue <= 2000 ? "YES (" + rainValue + ")" : "NO (" + rainValue + ")";
         document.getElementById("light").textContent = data.light || "--";
         if (data.timestamp) {
             document.getElementById("last-updated").textContent = "Last updated: " + data.timestamp;
