@@ -82,6 +82,11 @@ def on_connect(client, userdata, flags, rc, properties=None):
 def on_message(client, userdata, msg):
     topic = msg.topic
     value = msg.payload.decode()
+
+    # Ignore alert topic
+    if topic == "weather/alert":
+        return
+
     print(f"Received: {topic} = {value}")
 
     parameter = topic.split("/")[1]
