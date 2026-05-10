@@ -4,17 +4,21 @@ import paho.mqtt.client as mqtt
 import mysql.connector
 import threading
 import json
+import os
 from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
 # MySQL config
+import os
+
 db_config = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'admin123',
-    'database': 'weather_db'
+    'host': os.environ.get('DB_HOST', 'localhost'),
+    'port': int(os.environ.get('DB_PORT', 3306)),
+    'user': os.environ.get('DB_USER', 'root'),
+    'password': os.environ.get('DB_PASSWORD', 'admin123'),
+    'database': os.environ.get('DB_NAME', 'weather_db')
 }
 
 # HiveMQ config
