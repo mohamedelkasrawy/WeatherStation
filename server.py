@@ -145,7 +145,7 @@ def check_alerts():
                     print(f"Published alert to MQTT: {message}")
                     alert_active = True
 
-        if not alert_triggered and alert_active:
+        if not alert_triggered and alert_active and len(thresholds) > 0:
             mqtt_client.publish("weather/alert", "ALL_CLEAR")
             print("Published ALL_CLEAR to MQTT")
             alert_active = False
