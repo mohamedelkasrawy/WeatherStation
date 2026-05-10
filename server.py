@@ -118,6 +118,7 @@ def check_alerts():
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM alert_thresholds")
         thresholds = cursor.fetchall()
+        alert_triggered = False
         for threshold in thresholds:
             param = threshold["parameter"]
             value = latest_data.get(param, 0)
@@ -129,6 +130,14 @@ def check_alerts():
                 """, (param, value, message))
                 db.commit()
                 print(f"ALERT: {message}")
+                alert_triggered = True
+                # Publish alert back to ESP32
+                mqtt_client.publish("weather/alert", message)
+        
+        # Publish all clear if no alerts
+        if not alert_triggered:
+            mqtt_client.publish("weather/alert", "ALL_CLEAR")
+        
         cursor.close()
         db.close()
     except Exception as e:
