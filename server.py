@@ -117,7 +117,10 @@ def save_to_db():
     except Exception as e:
         print(f"Database error: {e}")
 
+alert_active = False
+
 def check_alerts():
+    global alert_active
     try:
         db = get_db()
         cursor = db.cursor(dictionary=True)
@@ -137,13 +140,15 @@ def check_alerts():
                 db.commit()
                 print(f"ALERT: {message}")
                 alert_triggered = True
-                mqtt_client.publish("weather/alert", message)
-                print(f"Published alert to MQTT: {message}")
+                if not alert_active:
+                    mqtt_client.publish("weather/alert", message)
+                    print(f"Published alert to MQTT: {message}")
+                    alert_active = True
 
-        # Only send ALL_CLEAR if thresholds exist but none triggered
-        if not alert_triggered and len(thresholds) > 0:
+        if not alert_triggered and alert_active:
             mqtt_client.publish("weather/alert", "ALL_CLEAR")
             print("Published ALL_CLEAR to MQTT")
+            alert_active = False
 
         cursor.close()
         db.close()
