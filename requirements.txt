@@ -1,3 +1,4 @@
-flask 
-flask-cors 
-paho-mqtt 
+flask
+flask-cors
+paho-mqtt
+mysql-connector-python
