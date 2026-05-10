@@ -131,15 +131,17 @@ def check_alerts():
                 db.commit()
                 print(f"ALERT: {message}")
                 alert_triggered = True
-                # Publish alert back to ESP32
                 mqtt_client.publish("weather/alert", message)
+                print(f"Published alert to MQTT: {message}")
         
-        # Publish all clear if no alerts
         if not alert_triggered:
             mqtt_client.publish("weather/alert", "ALL_CLEAR")
+            print("Published ALL_CLEAR to MQTT")
         
         cursor.close()
         db.close()
+    except Exception as e:
+        print(f"Alert error: {e}")
     except Exception as e:
         print(f"Alert error: {e}")
 
