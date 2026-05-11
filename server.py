@@ -78,6 +78,7 @@ def init_db():
 def on_connect(client, userdata, flags, rc, properties=None):
     print("Connected to MQTT broker!")
     client.subscribe("weather/#")
+    client.publish("weather/alert", "", retain=True)  # Clear retained message
 
 def on_message(client, userdata, msg):
     topic = msg.topic
@@ -143,10 +144,10 @@ def check_alerts():
 
         if alert_triggered:
             print("Publishing ALERT to MQTT")
-            mqtt_client.publish("weather/alert", "ALERT")
+            mqtt_client.publish("weather/alert", "ALERT", retain=False)
         else:
             print("Publishing ALL_CLEAR to MQTT")
-            mqtt_client.publish("weather/alert", "ALL_CLEAR")
+            mqtt_client.publish("weather/alert", "ALL_CLEAR", retain=False)
 
         cursor.close()
         db.close()
