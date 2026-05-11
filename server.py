@@ -125,6 +125,7 @@ def check_alerts():
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM alert_thresholds")
         thresholds = cursor.fetchall()
+        alert_triggered = False
 
         for threshold in thresholds:
             param = threshold["parameter"]
@@ -137,7 +138,14 @@ def check_alerts():
                 """, (param, value, message))
                 db.commit()
                 print(f"ALERT: {message}")
-                mqtt_client.publish("weather/alert", message)
+                alert_triggered = True
+
+        if alert_triggered:
+            print("Publishing ALERT to MQTT")
+            mqtt_client.publish("weather/alert", "ALERT")
+        else:
+            print("Publishing ALL_CLEAR to MQTT")
+            mqtt_client.publish("weather/alert", "ALL_CLEAR")
 
         cursor.close()
         db.close()
