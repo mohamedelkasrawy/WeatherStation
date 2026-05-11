@@ -93,7 +93,8 @@ def on_message(client, userdata, msg):
     latest_data[parameter] = float(value)
     latest_data["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    if all(latest_data[k] != 0 for k in ["temperature", "humidity"]):
+    # Only trigger on temperature to avoid duplicate saves
+    if parameter == "temperature":
         save_to_db()
         check_alerts()
 
